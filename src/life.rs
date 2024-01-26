@@ -1,3 +1,4 @@
+use graphics::{clear, rectangle};
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::input::{RenderArgs, UpdateArgs};
 
@@ -31,18 +32,13 @@ impl Application {
             mouse_posit: None,
             mouse_pressed: false,
         };
-        app.grid[5][12] = true;
-        app.grid[7][14] = true;
-        app.grid[7][15] = true;
-        app.grid[7][16] = true;
-        app.grid[18][5] = true;
-        app.grid[19][1] = true;
+        // app.grid[7][13] = true;
+        // app.grid[7][14] = true;
+        // app.grid[7][15] = true;
         app
     }
 
     pub fn render(&mut self, args: &RenderArgs) {
-        use graphics::*;
-
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(BACKGROUND_COLOR, gl);
@@ -82,7 +78,7 @@ impl Application {
 
     pub fn update(&mut self, args: &UpdateArgs) {
         self.timer = self.timer + args.dt;
-        if self.timer >= 0.5 {
+        if self.timer >= 1.0 {
             //println!("timer hit {}", self.timer);
             self.timer = 0.0;
 
@@ -130,9 +126,92 @@ impl Application {
     }
 
     fn check_neighbours(&mut self) {
+        // nw | n | ne
+        // -----------
+        //  w | c | e
+        // -----------
+        // sw | s | se
+        //
         // Any live cell with fewer than two live neighbours dies, as if by underpopulation.
         // Any live cell with two or three live neighbours lives on to the next generation.
         // Any live cell with more than three live neighbours dies, as if by overpopulation.
         // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+
+        // Copy grid
+        let mut new_grid = self.grid.clone();
+
+        // Iterate grid
+        for y in 0..GRID_Y_COUNT as usize {
+            for x in 0..GRID_X_COUNT as usize {
+                let mut neighbours = 0u8;
+
+                if x > 0 {
+                    let w = self.grid[y][x - 1];
+                    if w {
+                        neighbours += 1;
+                    }
+                    if y > 0 {
+                        let nw = self.grid[y - 1][x - 1];
+                        if nw {
+                            neighbours += 1;
+                        }
+                    }
+                }
+                if y > 0 {
+                    let n = self.grid[y - 1][x];
+                    if n {
+                        neighbours += 1;
+                    }
+                    if x < (GRID_X_COUNT - 1) as usize {
+                        let ne = self.grid[y - 1][x + 1];
+                        if ne {
+                            neighbours += 1;
+                        }
+                    }
+                }
+                if x < (GRID_X_COUNT - 1) as usize {
+                    let e = self.grid[y][x + 1];
+                    if e {
+                        neighbours += 1;
+                    }
+                    if y < (GRID_Y_COUNT - 1) as usize {
+                        let se = self.grid[y + 1][x + 1];
+                        if se {
+                            neighbours += 1;
+                        }
+                    }
+                }
+                if y < (GRID_Y_COUNT - 1) as usize {
+                    let s = self.grid[y + 1][x];
+                    if s {
+                        neighbours += 1;
+                    }
+                    if x > 0 {
+                        let sw = self.grid[y + 1][x - 1];
+                        if sw {
+                            neighbours += 1;
+                        }
+                    }
+                }
+
+                // Update cell in new grid
+                if self.grid[y][x] {
+                    // Cell alive
+                    if neighbours < 2 {
+                        new_grid[y][x] = false;
+                    } else if neighbours > 3 {
+                        new_grid[y][x] = false;
+                    }
+                } else {
+                    // Cell dead
+                    if neighbours == 3 {
+                        new_grid[y][x] = true;
+                    }
+                }
+            }
+        }
+
+        // Update grid
+        self.grid = new_grid;
     }
 }
